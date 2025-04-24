@@ -8,10 +8,10 @@ const Place = require("../models/Place"); // تأكد من المسار الصح
 // ✅ إضافة مراجعة جديدة
 router.post("/add", async (req, res) => {
   try {
-      const { user_id, place_id, rating, comment } = req.body;
+      const { user_id, place_id, review_text } = req.body;
 
       // 🔹 التحقق من صحة البيانات المدخلة
-      if (!user_id || !place_id || !rating || !comment) {
+      if (!user_id || !place_id || !review_text) {
           return res.status(400).json({ error: "Missing required fields." });
       }
 
@@ -26,8 +26,7 @@ router.post("/add", async (req, res) => {
       const newReview = new Review({
           user_id,
           place_id,
-          rating,
-          comment,
+          review_text,
           likes: 0,
           dislikes: 0,
           timestamp: new Date(),

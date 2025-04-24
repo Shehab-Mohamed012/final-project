@@ -6,8 +6,7 @@ const reviewSchema = new mongoose.Schema(
     _id: { type: String }, // ✅ الشكل الجديد "review001"
     user_id: { type: String, required: true },
     place_id: { type: String, required: true },
-    rating: { type: mongoose.Schema.Types.Mixed, required: true, min: 1, max: 5 },
-    comment: { type: String, required: true },
+    review_text: { type: String, required: true },
     likes: { type: mongoose.Schema.Types.Mixed, default: 0 },
     dislikes: { type: mongoose.Schema.Types.Mixed, default: 0 },
     timestamp: { type: Date, default: Date.now }
