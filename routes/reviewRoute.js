@@ -98,11 +98,11 @@ router.get("/:place_id", async (req, res) => {
 router.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { rating, comment } = req.body;
+    const { review_text } = req.body;
 
     const updatedReview = await Review.findByIdAndUpdate(
       id,
-      { rating, comment, timestamp: new Date() },
+      { review_text, timestamp: new Date() },
       { new: true }
     );
 
