@@ -7,6 +7,8 @@ const Place = require("../models/Place");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
+const path = require("path");
+
 
 router.post("/add", upload.single("image"), async (req, res) => {
   try {
@@ -119,7 +121,7 @@ router.get("/:id", async (req, res) => {
 // ✅ Get image by filename from GridFS
 // const { getGFSBucket } = require("../utils/fileUpload"); // خد الباكت من الدالة
 
-router.get("/image/:placeId", async (req, res) => {
+router.get("/image/byPlaceId/:placeId", async (req, res) => {
   try {
     const place = await Place.findById(req.params.placeId);
 
@@ -149,7 +151,40 @@ router.get("/image/:placeId", async (req, res) => {
 });
 
 //******************* */
+// get image by name from GridFS
+router.get("/image/:imageName", async (req, res) => {
+  try {
+    const gfsBucket = getGFSBucket();
+    if (!gfsBucket) {
+      return res.status(500).json({ error: "❌ GridFS not initialized yet" });
+    }
 
+    const imageName = req.params.imageName;
+
+    const ext = path.extname(imageName).toLowerCase(); // الامتداد
+    const mimeTypes = {
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".gif": "image/gif",
+      ".webp": "image/webp"
+    };
+
+    res.set("Content-Type", mimeTypes[ext] || "application/octet-stream");
+
+    const downloadStream = gfsBucket.openDownloadStreamByName(imageName);
+
+    downloadStream.on("error", () => {
+      return res.status(404).json({ error: "❌ Image not found" });
+    });
+
+    downloadStream.pipe(res);
+  } catch (err) {
+    console.error("❌ Error while retrieving image by name:", err);
+    res.status(500).json({ error: "❌ Failed to retrieve image" });
+  }
+});
+//****************** */
 // ✅ Update a place by ID
 router.put("/update/:id", upload.single("image"), async (req, res) => {
   try {
