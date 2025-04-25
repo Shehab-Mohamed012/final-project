@@ -93,15 +93,18 @@ module.exports = router;
 
 //--------------------
 // get place with image url
+
 router.get("/:id", async (req, res) => {
   try {
     const place = await Place.findById(req.params.id);
     if (!place) return res.status(404).json({ error: "❌ Place not found" });
 
     const placeObj = place.toObject();
-    if (placeObj.image) {
-      placeObj.image_url = `${req.protocol}://${req.get("host")}/places/image/${placeObj.image}`;
-    }
+    
+    // لو في صورة رجّع الرابط، لو مفيش رجّع null
+    placeObj.image_url = placeObj.image
+      ? `${req.protocol}://${req.get("host")}/places/image/${placeObj.image}`
+      : null;
 
     res.json(placeObj);
 
