@@ -66,7 +66,7 @@ router.post("/add", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const interactions = await Interaction.find();
-    res.status(200).json(interactions);
+    res.status(200).json({data:interactions});
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -82,7 +82,7 @@ router.get("/user/:user_id", async (req, res) => {
         return res.status(404).json({ message: "No interaction for this user" });
       }
   
-      res.status(200).json(interactions);
+      res.status(200).json({data:interactions});
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -98,7 +98,7 @@ router.get("/user/:user_id", async (req, res) => {
         return res.status(404).json({ message: "No interaction for this palce" });
       }
   
-      res.status(200).json(interactions);
+      res.status(200).json({data:interactions});
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

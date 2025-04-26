@@ -71,7 +71,7 @@ router.post("/add", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const reviews = await Review.find().sort({ timestamp: -1 }); // ترتيب الأحدث أولاً
-    res.status(200).json({ reviews });
+    res.status(200).json({ data :reviews });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -88,7 +88,7 @@ router.get("/:place_id", async (req, res) => {
       return res.status(404).json({ message: "No reviews found for this place." });
     }
 
-    res.status(200).json(reviews);
+    res.status(200).json({data :reviews});
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
