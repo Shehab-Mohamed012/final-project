@@ -5,6 +5,7 @@ const User = require("../models/user");
 const authMiddleware = require("../middleware/authMiddleware");
 const multer = require("multer");
 const { getGFSBucket } = require("../utils/fileUpload");
+const Preference = require("../models/preferences");
 const router = express.Router();
 
 
@@ -12,7 +13,8 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// 🔹 إنشاء مستخدم جديد مع صورة
+// // 🔹 إنشاء مستخدم جديد مع صورة مع يوزر ترافيل بريفرنس ب قيم الإفتراضية
+
 router.post("/register", upload.single("profile_image"), async (req, res) => {
   try {
     const { name, email, password, role, preferences } = req.body;
@@ -50,7 +52,20 @@ router.post("/register", upload.single("profile_image"), async (req, res) => {
     });
 
     const savedUser = await newUser.save();
-    res.status(201).json({ message: "✅ User registered", user: savedUser });
+
+    // ✅ أوتوماتيك: إنشاء تفضيلات سفر فاضية لهذا المستخدم
+    const emptyPreference = new Preference({
+      user_id: savedUser._id,
+      destinations: [],
+      travel_dates: `${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`, // الشهر الحالي مع السنة
+      group_type: "solo",
+      accessibility_needs: [],
+      budget: "medium"
+    });
+
+    await emptyPreference.save();
+
+    res.status(201).json({ message: "✅ User registered and preferences created", user: savedUser });
 
   } catch (err) {
     console.error("❌ Registration error:", err);
@@ -58,6 +73,7 @@ router.post("/register", upload.single("profile_image"), async (req, res) => {
   }
 });
 
+//***************** */
 // 🔍 عرض صورة من GridFS حسب الاسم
 router.get("/image/:userId", async (req, res) => {
   try {
@@ -325,21 +341,27 @@ router.get("/email/:email", async (req, res) => {
     }
   });
 
-// Delete user by ID
+// // Delete user by ID
 router.delete("/id/:id", async (req, res) => {
   try {
     const { id } = req.params;
+
+    // أول حاجة امسح اليوزر
     const user = await User.findByIdAndDelete(id);
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
 
-    res.status(200).json({ message: "User deleted successfully!" });
+    // بعدها امسح الترافيل بريفرينس المرتبطة باليوزر ده
+    await Preference.deleteMany({ user_id: id });
+
+    res.status(200).json({ message: "User and related preferences deleted successfully!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
+//********************* */
 // Delete user by email
 router.delete("/email/:email", async (req, res) => {
     try {
