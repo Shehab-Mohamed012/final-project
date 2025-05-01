@@ -8,7 +8,11 @@ const interactionSchema = new mongoose.Schema(
     place_id: { type: String, required: true }, // معرف المكان
     interaction_type: {
       type: String,
-      enum: ["like", "save", "view", "click"], // أنواع التفاعل المسموحة
+      enum: ["like", "save", "view", "share"],// أنواع التفاعل المسموحة
+      // like : بيسمع في المكان
+      // save :  بيحفظ المكان في قائمة المفضلات عند اليوزر
+      // view : بيشوف تفاصيل المكان
+      // share : بيظهرله لنك المكان في  الأبليكاشن
       required: true
     },
     timestamp: { type: Date, default: Date.now } // وقت التفاعل

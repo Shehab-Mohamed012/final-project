@@ -5,10 +5,15 @@ const preferenceSchema = new mongoose.Schema(
   {
     _id: { type: String }, // ✅ _id فيه التنسيق "preference001"
     user_id: { type: String, required: true, unique: true }, // معرف المستخدم
-    destinations: [{ type: String, required: true }], // قائمة الوجهات المفضلة
+    destinations: [{ type: String, required: true ,
+      enum :[
+      "Cairo","Giza","Alexandria","Qalyubia","Dakahlia","Beheira","Gharbia","Sharqia","Monufia",
+      "Kafr El Sheikh","Damietta","Port Said","Ismailia","Suez","North Sinai","South Sinai","Beni Suef",
+      "Faiyum","Minya","Asyut","Sohag","Qena","Luxor","Aswan","Red Sea","New Valley","Matrouh"
+     ]}], // قائمة الوجهات المفضلة
     travel_dates: { type: String, required: true }, // فترة السفر
     group_type: { type: String, enum: ["solo", "family", "friends", "couple"], required: true }, // نوع المجموعة
-    accessibility_needs: [{ type: String }], // متطلبات الوصول
+    accessibility_needs: [{ type: String, enum: ["senior-friendly", "pet-friendly", "wheelchair-friendly"] }], // متطلبات الوصول
     budget: { type: String, enum: ["low", "medium", "high"], default: "medium" } // الميزانية
   },
   { collection: "user_travel_preferences" }

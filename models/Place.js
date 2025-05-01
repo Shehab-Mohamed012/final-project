@@ -5,17 +5,40 @@ const placeSchema = new mongoose.Schema(
   {
     _id: { type: String }, // ✅ _id هيبقى بالشكل "place001"
     name: { type: String, required: true },
-    category: { type: String, required: true },
-    tags: [{ type: String }],
+    category: { type: String, required: true,
+      enum :["historical","nature","beach","food","city","adventure","wine tour","cultural"] },
+    tags: [{ type: String,
+      enum:["castles","hiking","architecture","luxury","wildlife","scenic","nightlife","restaurants","wine","museums","beaches","kayaking",
+        "cycling","skiing","photography","hot air balloon","shopping","bars","concerts","spa","UNESCO"]
+     }],
     description: { type: String },
     image: { type: String }, // ✅ 
     location: {
-      city: { type: String, required: true },
+      city: { type: String, required: true, 
+        enum :[
+         "Cairo","Giza","Alexandria","Qalyubia","Dakahlia","Beheira","Gharbia","Sharqia","Monufia",
+         "Kafr El Sheikh","Damietta","Port Said","Ismailia","Suez","North Sinai","South Sinai","Beni Suef",
+         "Faiyum","Minya","Asyut","Sohag","Qena","Luxor","Aswan","Red Sea","New Valley","Matrouh"
+        ]
+      },
       country: { type: String, required: true },
-      latitude: { type: mongoose.Schema.Types.Mixed, required: true },
-      longitude: { type: mongoose.Schema.Types.Mixed, required: true },
+      latitude: { type: mongoose.Schema.Types.Mixed, required: true,
+        validate: {
+        validator: function (value) {
+          return value >= 22 && value <= 32.5; // مصر خط العرض
+        },
+        message: 'Latitude must be within Egypt (22 to 32.5)'
+      } },
+      longitude: { type: mongoose.Schema.Types.Mixed, required: true,
+        validate: {
+          validator: function (value) {
+            return value >= 25 && value <= 36.5; // مصر خط الطول
+          },
+          message: 'Longitude must be within Egypt (25 to 36.5)'
+        }
+       },
     },
-    accessibility: [{ type: String }],
+    accessibility: [{ type: String ,enum: ["senior-friendly", "pet-friendly", "wheelchair-friendly", null], default: null}],
     average_rating: { type: mongoose.Schema.Types.Mixed, default: 0 },
     likes: { type: Number, default: 0 },
     reviews_count: { type: Number, default: 0 },

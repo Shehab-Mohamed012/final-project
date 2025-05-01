@@ -66,6 +66,117 @@ router.post("/add", async (req, res) => {
   }
 });
 
+//*********************************** */
+// ✅ إضافة مراجعات متعددة
+router.post("/add-multiple", async (req, res) => {
+  try {
+      const reviews = req.body;
+
+      // التحقق من أن البيانات مرسلة كمصفوفة
+      if (!Array.isArray(reviews)) {
+          return res.status(400).json({ error: "يجب إرسال مصفوفة من المراجعات." });
+      }
+
+      const results = [];
+      const placesToUpdate = new Set(); // لتتبع الأماكن التي تحتاج لتحديث إحصائياتها
+
+      // معالجة كل مراجعة على حدة
+      for (const reviewData of reviews) {
+          const { user_id, place_id, review_text, likes = 0, dislikes = 0 } = reviewData;
+
+          try {
+              // 🔹 التحقق من الحقول المطلوبة
+              if (!user_id || !place_id || !review_text) {
+                  results.push({
+                      review: reviewData,
+                      status: "failed",
+                      error: "Missing required fields."
+                  });
+                  continue;
+              }
+
+              // 🔎 تحقق من وجود المستخدم والمكان
+              const userExists = await User.findById(user_id);
+              const placeExists = await Place.findById(place_id);
+
+              if (!userExists || !placeExists) {
+                  results.push({
+                      review: reviewData,
+                      status: "failed",
+                      error: !userExists ? "User not found." : "Place not found."
+                  });
+                  continue;
+              }
+
+              // 🔹 إنشاء المراجعة الجديدة
+              const newReview = new Review({
+                  user_id,
+                  place_id,
+                  review_text,
+                  likes,
+                  dislikes,
+                  timestamp: new Date(),
+              });
+              await newReview.save();
+
+              // إضافة المكان لقائمة الأماكن التي تحتاج لتحديث الإحصائيات
+              placesToUpdate.add(place_id.toString());
+
+              results.push({
+                  review: reviewData,
+                  status: "success",
+                  message: "Review added successfully!",
+                  data: newReview
+              });
+
+          } catch (error) {
+              results.push({
+                  review: reviewData,
+                  status: "failed",
+                  error: error.message
+              });
+          }
+      }
+
+      // 🔄 تحديث إحصائيات الأماكن
+      for (const placeId of placesToUpdate) {
+          try {
+              // ✅ حساب عدد المراجعات الجديد
+              const reviewsCount = await Review.countDocuments({ place_id: placeId });
+
+              // ✅ حساب متوسط التقييم
+              const reviews = await Review.find({ place_id: placeId });
+              const totalRatings = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+              const averageRating = reviews.length > 0 ? totalRatings / reviews.length : 0;
+
+              // ✅ تحديث بيانات المكان
+              await Place.findByIdAndUpdate(
+                  placeId,
+                  {
+                      reviews_count: reviewsCount,
+                      average_rating: averageRating,
+                      updated_at: new Date()
+                  },
+                  { new: true }
+              );
+
+          } catch (error) {
+              console.error(`Error updating place ${placeId}:`, error);
+          }
+      }
+
+      res.status(200).json({
+          message: "تم معالجة المراجعات بنجاح",
+          results,
+          updatedPlacesCount: placesToUpdate.size
+      });
+
+  } catch (error) {
+      console.error("Error adding multiple reviews:", error);
+      res.status(500).json({ error: error.message });
+  }
+});
+//********************************** */
 
 // ✅ جلب المراجعات مع ترتيب الأحدث أولاً
 router.get("/", async (req, res) => {

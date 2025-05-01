@@ -73,6 +73,155 @@ router.post("/add_interaction", async (req, res) => {
     }
 });
 
+//****************************** */
+router.post("/add-multiple", async (req, res) => {
+  try {
+      const interactions = req.body;
+
+      // التحقق من أن البيانات مرسلة كمصفوفة
+      if (!Array.isArray(interactions)) {
+          return res.status(400).json({ error: "يجب إرسال مصفوفة من التفاعلات" });
+      }
+
+      const results = [];
+      const reviewsToUpdate = new Set(); // لتتبع المراجعات التي تحتاج لتحديث العدادات
+
+      // معالجة كل تفاعل على حدة
+      for (const interactionData of interactions) {
+          const { user_id, review_id, interaction_type } = interactionData;
+
+          try {
+              // التحقق من الحقول المطلوبة
+              if (!user_id || !review_id || !interaction_type) {
+                  results.push({
+                      interaction: interactionData,
+                      status: "failed",
+                      error: "Missing required fields"
+                  });
+                  continue;
+              }
+
+              // ✅ تأكد من وجود اليوزر والمراجعة
+              const user = await User.findById(user_id);
+              const review = await Review.findById(review_id);
+
+              if (!user || !review) {
+                  results.push({
+                      interaction: interactionData,
+                      status: "failed",
+                      error: !user ? "User not found" : "Review not found"
+                  });
+                  continue;
+              }
+
+              // 🔎 البحث عن التفاعل السابق
+              const existingInteraction = await ReviewInteraction.findOne({ user_id, review_id });
+
+              if (existingInteraction) {
+                  if (existingInteraction.interaction_type === interaction_type) {
+                      // ✅ إلغاء التفاعل (حذفه)
+                      await ReviewInteraction.deleteOne({ _id: existingInteraction._id });
+
+                      // تسجيل التحديث المطلوب للمراجعة
+                      reviewsToUpdate.add(JSON.stringify({
+                          review_id,
+                          likeIncrement: interaction_type === "like" ? -1 : 0,
+                          dislikeIncrement: interaction_type === "dislike" ? -1 : 0
+                      }));
+
+                      results.push({
+                          interaction: interactionData,
+                          status: "success",
+                          message: "Interaction removed (undo)"
+                      });
+                  } else {
+                      // ✅ تغيير نوع التفاعل
+                      const oldType = existingInteraction.interaction_type;
+                      existingInteraction.interaction_type = interaction_type;
+                      existingInteraction.timestamp = new Date();
+                      await existingInteraction.save();
+
+                      // تسجيل التحديث المطلوب للمراجعة
+                      reviewsToUpdate.add(JSON.stringify({
+                          review_id,
+                          likeIncrement: interaction_type === "like" ? 1 : -1,
+                          dislikeIncrement: interaction_type === "dislike" ? 1 : -1
+                      }));
+
+                      results.push({
+                          interaction: interactionData,
+                          status: "success",
+                          message: "Interaction updated",
+                          data: existingInteraction
+                      });
+                  }
+              } else {
+                  // ✅ تفاعل جديد
+                  const newInteraction = new ReviewInteraction({
+                      user_id,
+                      review_id,
+                      interaction_type,
+                      timestamp: new Date()
+                  });
+                  await newInteraction.save();
+
+                  // تسجيل التحديث المطلوب للمراجعة
+                  reviewsToUpdate.add(JSON.stringify({
+                      review_id,
+                      likeIncrement: interaction_type === "like" ? 1 : 0,
+                      dislikeIncrement: interaction_type === "dislike" ? 1 : 0
+                  }));
+
+                  results.push({
+                      interaction: interactionData,
+                      status: "success",
+                      message: "Interaction added",
+                      data: newInteraction
+                  });
+              }
+          } catch (error) {
+              results.push({
+                  interaction: interactionData,
+                  status: "failed",
+                  error: error.message
+              });
+          }
+      }
+
+      // 🔄 تحديث عدادات المراجعات
+      const updatePromises = [];
+      for (const reviewUpdate of reviewsToUpdate) {
+          const { review_id, likeIncrement, dislikeIncrement } = JSON.parse(reviewUpdate);
+          
+          const updateObj = {};
+          if (likeIncrement !== 0) updateObj.$inc = { likes: likeIncrement };
+          if (dislikeIncrement !== 0) {
+              updateObj.$inc = updateObj.$inc || {};
+              updateObj.$inc.dislikes = dislikeIncrement;
+          }
+
+          if (Object.keys(updateObj).length > 0) {
+              updatePromises.push(
+                  Review.findByIdAndUpdate(review_id, updateObj)
+              );
+          }
+      }
+
+      await Promise.all(updatePromises);
+
+      res.status(200).json({
+          message: "تم معالجة التفاعلات بنجاح",
+          results,
+          updatedReviewsCount: reviewsToUpdate.size
+      });
+
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: error.message });
+  }
+});
+//***************************** */
+
 router.get("/interactions_summary", async (req, res) => {
     try {
       const interactions = await ReviewInteraction.aggregate([

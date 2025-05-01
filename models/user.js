@@ -10,8 +10,12 @@ const userSchema = new mongoose.Schema(
     role: { type: String, default: "user" },
     profile_image: { type: String },
     preferences: {
-      categories: [{ type: String }],
-      tags: [{ type: String }]
+      categories: [{ type: String ,
+        enum :["historical","nature","beach","food","city","adventure","wine tour","cultural"] }],
+      tags: [{ type: String ,
+        enum:["castles","hiking","architecture","luxury","wildlife","scenic","nightlife","restaurants","wine","museums","beaches","kayaking",
+          "cycling","skiing","photography","hot air balloon","shopping","bars","concerts","spa","UNESCO"]
+      }]
     },
     saved_places: [{ type: String }],
     search_history: [

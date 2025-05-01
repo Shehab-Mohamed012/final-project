@@ -29,7 +29,7 @@ router.post("/add", upload.single("image"), async (req, res) => {
         return res.status(500).json({ error: "❌ GridFSBucket is not initialized yet." });
       }
 
-      filename = `place_${Date.now()}_${req.file.originalname}`;
+      filename = `place_${req.file.originalname}`;
       const uploadStream = gfsBucket.openUploadStream(filename);
       uploadStream.end(req.file.buffer);
     }
@@ -92,7 +92,196 @@ module.exports = router;
 //   }
 // });
 
+//************************** */
+// // ✅ تحديث أماكن متعددة في وقت واحد
+// (يقبل مصفوفة من الأماكن مع الـ ID والاسم والتصنيف والوسوم)
+router.post("/update-places", async (req, res) => {
+  try {
+    const placesUpdates = req.body;
 
+    // التحقق من أن البيانات مرسلة كمصفوفة
+    if (!Array.isArray(placesUpdates)) {
+      return res.status(400).json({ error: "يجب إرسال مصفوفة من الأماكن للتحديث." });
+    }
+
+    const results = [];
+    
+    // معالجة كل مكان على حدة
+    for (const update of placesUpdates) {
+      const { id, name, category, tags } = update;
+
+      // التحقق من الحقول المطلوبة
+      if (!id || !name || !category || !tags) {
+        results.push({
+          update,
+          status: "failed",
+          error: "يجب توفير جميع الحقول: id, name, category, tags"
+        });
+        continue;
+      }
+
+      // التحقق من أن التصنيف من القيم المسموحة
+      const allowedCategories = ["historical", "nature", "beach", "food", "city", "adventure", "wine tour", "cultural"];
+      if (!allowedCategories.includes(category)) {
+        results.push({
+          update,
+          status: "failed",
+          error: `التصنيف غير مسموح به. المسموح: ${allowedCategories.join(", ")}`
+        });
+        continue;
+      }
+
+      try {
+        // البحث عن المكان بواسطة الـ ID والاسم معاً للتحقق الدقيق
+        const place = await Place.findOne({ _id: id, name: name });
+
+        if (!place) {
+          results.push({
+            update,
+            status: "failed",
+            error: "لم يتم العثور على المكان بالمعايير المحددة"
+          });
+          continue;
+        }
+
+        // تحديث البيانات
+        const updatedPlace = await Place.findByIdAndUpdate(
+          id,
+          {
+            $set: {
+              category: category,
+              tags: tags
+            }
+          },
+          { new: true } // لإرجاع النسخة المحدثة
+        );
+
+        results.push({
+          update,
+          status: "success",
+          message: "تم تحديث المكان بنجاح",
+          data: updatedPlace
+        });
+
+      } catch (error) {
+        results.push({
+          update,
+          status: "failed",
+          error: error.message
+        });
+      }
+    }
+
+    // إرسال النتائج النهائية
+    res.status(200).json({
+      message: "تم معالجة تحديثات الأماكن",
+      results
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+//************************* */
+// // ✅ تحديث أماكن متعددة في وقت واحد (تحديث المدينة فقط)
+// (يقبل مصفوفة من الأماكن مع الـ ID والاسم والمدينة)
+
+router.post("/update-places-city", async (req, res) => {
+  try {
+    const placesUpdates = req.body;
+
+    // التحقق من أن البيانات مرسلة كمصفوفة
+    if (!Array.isArray(placesUpdates)) {
+      return res.status(400).json({ error: "يجب إرسال مصفوفة من الأماكن للتحديث." });
+    }
+
+    // قائمة المحافظات المسموح بها
+    const allowedGovernorates = [
+      "Cairo", "Giza", "Alexandria", "Qalyubia", "Dakahlia", "Beheira", 
+      "Gharbia", "Sharqia", "Monufia", "Kafr El Sheikh", "Damietta", 
+      "Port Said", "Ismailia", "Suez", "North Sinai", "South Sinai", 
+      "Beni Suef", "Faiyum", "Minya", "Asyut", "Sohag", "Qena", 
+      "Luxor", "Aswan", "Red Sea", "New Valley", "Matrouh"
+    ];
+
+    const results = [];
+    
+    // معالجة كل مكان على حدة
+    for (const update of placesUpdates) {
+      const { id, name, city } = update;
+
+      // التحقق من الحقول المطلوبة
+      if (!id || !name || !city) {
+        results.push({
+          update,
+          status: "failed",
+          error: "يجب توفير جميع الحقول: id, name, city"
+        });
+        continue;
+      }
+
+      // التحقق من أن المحافظة من القيم المسموحة
+      if (!allowedGovernorates.includes(city)) {
+        results.push({
+          update,
+          status: "failed",
+          error: `المحافظة غير مسموح بها. المسموح: ${allowedGovernorates.join(", ")}`
+        });
+        continue;
+      }
+
+      try {
+        // البحث عن المكان بواسطة الـ ID والاسم معاً للتحقق الدقيق
+        const place = await Place.findOne({ _id: id, name: name });
+
+        if (!place) {
+          results.push({
+            update,
+            status: "failed",
+            error: "لم يتم العثور على المكان بالمعايير المحددة"
+          });
+          continue;
+        }
+
+        // تحديث بيانات المدينة
+        const updatedPlace = await Place.findByIdAndUpdate(
+          id,
+          {
+            $set: {
+              "location.city": city
+            }
+          },
+          { new: true } // لإرجاع النسخة المحدثة
+        );
+
+        results.push({
+          update,
+          status: "success",
+          message: "تم تحديث المدينة بنجاح",
+          data: updatedPlace
+        });
+
+      } catch (error) {
+        results.push({
+          update,
+          status: "failed",
+          error: error.message
+        });
+      }
+    }
+
+    // إرسال النتائج النهائية
+    res.status(200).json({
+      message: "تم معالجة تحديثات المدن",
+      results
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+//**************************** */
 //--------------------
 // get place with image url
 

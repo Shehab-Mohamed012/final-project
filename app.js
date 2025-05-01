@@ -11,6 +11,7 @@ const RoadmapRoute = require("./routes/roadmapsRoute");
 const reviewInteractionRoute = require('./routes/reviewInteractionRoute');
 const Place = require('./models/Place');
 const user_shown_placesRoute = require('./routes/user_shown_placesRoute');
+require("dotenv").config();
 
 const app = express();
 
@@ -27,7 +28,7 @@ app.use(compression());
 
 
 const port = 3000 || process.env.PORT; // Use the port from environment variables or default to 3000
-const dbName = 'travel_app';
+const dbName = "travel_app"; // Database name
 
 app.use(bodyParser.json());
 
@@ -35,9 +36,7 @@ app.use(bodyParser.json());
 app.use(express.json());
 
 // Connect to MongoDB   
-const dbconn = `mongodb+srv://shehabwww153:cmCqBjtQCQDWbvlo@userauth.rvtb5.mongodb.net/${dbName}?retryWrites=true&w=majority&appName=userAuth`;
-
-mongoose.connect(dbconn)
+mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log(`✅ Connected to the database: ${dbName}`);
 
