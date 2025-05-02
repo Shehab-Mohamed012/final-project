@@ -181,6 +181,120 @@ router.put("/update/:user_id", async (req, res) => {
     }
 });
 
+
+//***************************** */
+// ✅ 3️⃣ Bulk Update User Preferences
+// ✅ تحديث جماعي لتفضيلات المستخدمين
+router.put("/bulk-update", async (req, res) => {
+    try {
+        const updates = req.body; // Array of update objects
+
+        // Validate input is an array
+        if (!Array.isArray(updates)) {
+            return res.status(400).json({ error: "Input should be an array of update objects" });
+        }
+
+        const validMonths = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+
+        const results = [];
+        const errors = [];
+
+        for (const update of updates) {
+            try {
+                // Validate required fields
+                if (!update._id || !update.user_id) {
+                    errors.push({
+                        pref_id: update._id,
+                        user_id: update.user_id,
+                        error: "Missing _id or user_id field"
+                    });
+                    continue;
+                }
+
+                // Check if user exists
+                const userExists = await User.findById(update.user_id);
+                if (!userExists) {
+                    errors.push({
+                        pref_id: update._id,
+                        user_id: update.user_id,
+                        error: "User not found"
+                    });
+                    continue;
+                }
+
+                // Check if preference exists
+                const existingPreference = await Preference.findOne({
+                    _id: update._id,
+                    user_id: update.user_id
+                });
+                
+                if (!existingPreference) {
+                    errors.push({
+                        pref_id: update._id,
+                        user_id: update.user_id,
+                        error: "Preference not found for this user"
+                    });
+                    continue;
+                }
+
+                // Process travel_dates if provided
+                if (update.travel_dates) {
+                    if (!validMonths.includes(update.travel_dates)) {
+                        errors.push({
+                            pref_id: update._id,
+                            user_id: update.user_id,
+                            error: "Invalid month name for travel_dates"
+                        });
+                        continue;
+                    }
+
+                    // Add current year to travel_dates
+                    const currentYear = new Date().getFullYear();
+                    update.travel_dates = `${update.travel_dates} ${currentYear}`;
+                }
+
+                // Remove user_id from update to prevent modification
+                const updateData = { ...update };
+                delete updateData._id;
+                delete updateData.user_id;
+
+                // Perform the update
+                const updatedPreference = await Preference.findOneAndUpdate(
+                    { _id: update._id, user_id: update.user_id },
+                    { $set: updateData },
+                    { new: true }
+                );
+
+                results.push({
+                    pref_id: update._id,
+                    user_id: update.user_id,
+                    status: "success",
+                    updatedPreference
+                });
+            } catch (error) {
+                errors.push({
+                    pref_id: update._id,
+                    user_id: update.user_id,
+                    error: error.message
+                });
+            }
+        }
+
+        res.status(200).json({
+            message: "Bulk update completed",
+            successCount: results.length,
+            errorCount: errors.length,
+            results,
+            errors
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+//**************************** */
 // ✅ 4️⃣ Delete User Preferences
 router.delete("/delete/:user_id", async (req, res) => {
     try {

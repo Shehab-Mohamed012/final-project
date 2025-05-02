@@ -11,7 +11,10 @@ const preferenceSchema = new mongoose.Schema(
       "Kafr El Sheikh","Damietta","Port Said","Ismailia","Suez","North Sinai","South Sinai","Beni Suef",
       "Faiyum","Minya","Asyut","Sohag","Qena","Luxor","Aswan","Red Sea","New Valley","Matrouh"
      ]}], // قائمة الوجهات المفضلة
-    travel_dates: { type: String, required: true }, // فترة السفر
+    travel_dates: { type: String,
+      enum :[
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"], required: true }, // فترة السفر
     group_type: { type: String, enum: ["solo", "family", "friends", "couple"], required: true }, // نوع المجموعة
     accessibility_needs: [{ type: String, enum: ["senior-friendly", "pet-friendly", "wheelchair-friendly"] }], // متطلبات الوصول
     budget: { type: String, enum: ["low", "medium", "high"], default: "medium" } // الميزانية

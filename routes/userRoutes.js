@@ -200,7 +200,7 @@ router.delete("/image/:id", async (req, res) => {
 //       res.status(500).json({ error: err.message });
 //     }
 // });
-  
+
 
 // Login user
 router.post("/login", async (req, res) => {
@@ -222,7 +222,10 @@ router.post("/login", async (req, res) => {
     //create token
     const token = jwt.sign({ id: user._id, role: user.role }, "YOUR_SECRET_KEY", { expiresIn: "1h" });
 
-    res.status(200).json({ message: "Login successful!", token });
+     // Return user info without passwordHash
+     const { passwordHash, ...userData } = user.toObject();
+
+    res.status(200).json({ message: "Login successful!", token , data: userData });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
