@@ -6,6 +6,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 const multer = require("multer");
 const { getGFSBucket } = require("../utils/fileUpload");
 const Preference = require("../models/preferences");
+const Place = require("../models/Place"); // تأكد من استيراد نموذج الأماكن
 const router = express.Router();
 
 
@@ -381,4 +382,38 @@ router.delete("/email/:email", async (req, res) => {
     }
 });
   
+
+router.get("/saved-places/:userId", async (req, res) => {
+  try {
+    // أولاً: احصل على المستخدم باستخدام الـ userId
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: "❌ User not found" });
+    }
+
+    // ثانياً: احصل على الأماكن المحفوظة باستخدام الـ IDs الموجودة في saved_places
+    const savedPlaces = await Place.find({ 
+      _id: { $in: user.saved_places } 
+    });
+
+    // ثالثاً: عدّل كل مكان لإضافة image_url إذا كان موجوداً
+    const placesWithImageUrl = savedPlaces.map(place => {
+      const placeObj = place.toObject();
+      placeObj.image_url = placeObj.image
+        ? `${req.protocol}://${req.get("host")}/places/image/${placeObj.image}`
+        : null;
+      return placeObj;
+    });
+
+    res.json(placesWithImageUrl);
+
+  } catch (err) {
+    console.error("❌ Failed to fetch saved places:", err);
+    res.status(500).json({ error: "❌ Server error" });
+  }
+});
+
+
+
 module.exports = router;
