@@ -406,7 +406,7 @@ router.get("/saved-places/:userId", async (req, res) => {
       return placeObj;
     });
 
-    res.json(placesWithImageUrl);
+    res.json({data:placesWithImageUrl});
 
   } catch (err) {
     console.error("❌ Failed to fetch saved places:", err);
